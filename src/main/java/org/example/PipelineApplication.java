@@ -15,14 +15,24 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.example.transform.KafkaGenericRecordConverter;
 import org.order.status.Order;
 import org.order.status.Order_Status;
 import org.order.status.Order_Type;
 import org.example.options.RequiredAppOptions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.http.client.config.RequestConfig;
 
+import javax.naming.ServiceUnavailableException;
+import java.io.IOException;
+import java.net.http.HttpClient;
 import java.util.Map;
 import java.util.Objects;
 
@@ -38,7 +48,6 @@ public class PipelineApplication {
 
     public static Pipeline setupPipeline(RequiredAppOptions options){
         Pipeline pipeline = Pipeline.create(options);
-        ObjectMapper objectMapper = new ObjectMapper();
 
         pipeline
                 .apply("ReadFromKafka",
@@ -58,19 +67,36 @@ public class PipelineApplication {
                                         //ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"
                                 ))
                 )
-                .apply("ExtractKV", ParDo.of(new DoFn<KafkaRecord<String, GenericRecord>, Order>() {
-                    @ProcessElement
-                    public void processElement(@Element KafkaRecord<String, GenericRecord> record, OutputReceiver<Order> out) throws JsonProcessingException {
-                        GenericRecord element = Objects.requireNonNull(record).getKV().getValue();
-                        String content = Objects.requireNonNull(element).toString();
-                        Order orderEvent = objectMapper.readValue(content, Order.class);
-                        out.output(orderEvent);
-                    }
-                }))
+               .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
                 .apply("PrintMessage", ParDo.of(new DoFn<Order, Void>() {
+                    CloseableHttpClient httpClient;
+                    RequestConfig requestConfig;
+
+                    @Setup
+                    public void steup(){
+                        httpClient = HttpClients.createDefault();
+                        requestConfig = RequestConfig.custom()
+                                .setConnectTimeout(5000)
+                                .setSocketTimeout(5000)
+                                .build();
+                    }
+
                     @ProcessElement
-                    public void processElement(@Element Order element, OutputReceiver<Void> receiver) {
+                    public void processElement(@Element Order element, ProcessContext receiver) {
                         System.out.println(element);
+                        String customerNo = (String)element.getCustomerNumber();
+                        System.out.println(customerNo);
+                        HttpGet httpGet = new HttpGet("http://localhost:5435/customer/"+ customerNo);
+                        httpGet.setConfig(requestConfig);
+                        try (CloseableHttpResponse response = httpClient.execute(httpGet)){
+                            String responseBody = EntityUtils.toString(response.getEntity());
+
+                            // Print the response
+                            System.out.println("Response Status: " + response.getStatusLine());
+                            System.out.println("Response Body: " + responseBody);
+                        } catch (IOException e) {
+                            System.out.println(e);
+                        }
                     }
                 }));
 
