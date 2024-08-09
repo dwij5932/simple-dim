@@ -21,6 +21,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.example.transform.GenerateCustomerDeatils;
 import org.example.transform.KafkaGenericRecordConverter;
 import org.order.status.Order;
 import org.order.status.Order_Status;
@@ -67,38 +68,39 @@ public class PipelineApplication {
                                         //ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"
                                 ))
                 )
-               .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
-                .apply("PrintMessage", ParDo.of(new DoFn<Order, Void>() {
-                    CloseableHttpClient httpClient;
-                    RequestConfig requestConfig;
-
-                    @Setup
-                    public void steup(){
-                        httpClient = HttpClients.createDefault();
-                        requestConfig = RequestConfig.custom()
-                                .setConnectTimeout(5000)
-                                .setSocketTimeout(5000)
-                                .build();
-                    }
-
-                    @ProcessElement
-                    public void processElement(@Element Order element, ProcessContext receiver) {
-                        System.out.println(element);
-                        String customerNo = (String)element.getCustomerNumber();
-                        System.out.println(customerNo);
-                        HttpGet httpGet = new HttpGet("http://localhost:5435/customer/"+ customerNo);
-                        httpGet.setConfig(requestConfig);
-                        try (CloseableHttpResponse response = httpClient.execute(httpGet)){
-                            String responseBody = EntityUtils.toString(response.getEntity());
-
-                            // Print the response
-                            System.out.println("Response Status: " + response.getStatusLine());
-                            System.out.println("Response Body: " + responseBody);
-                        } catch (IOException e) {
-                            System.out.println(e);
-                        }
-                    }
-                }));
+                .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
+                .apply("PrintMessage", ParDo.of(new GenerateCustomerDeatils()));
+//                .apply("PrintMessage", ParDo.of(new DoFn<Order, Void>() {
+//                    CloseableHttpClient httpClient;
+//                    RequestConfig requestConfig;
+//
+//                    @Setup
+//                    public void setup(){
+//                        httpClient = HttpClients.createDefault();
+//                        requestConfig = RequestConfig.custom()
+//                                .setConnectTimeout(5000)
+//                                .setSocketTimeout(5000)
+//                                .build();
+//                    }
+//
+//                    @ProcessElement
+//                    public void processElement(@Element Order element, ProcessContext receiver) {
+//                        System.out.println(element);
+//                        String customerNo = (String)element.getCustomerNumber();
+//                        System.out.println(customerNo);
+//                        HttpGet httpGet = new HttpGet("http://localhost:5435/customer/"+ customerNo);
+//                        httpGet.setConfig(requestConfig);
+//                        try (CloseableHttpResponse response = httpClient.execute(httpGet)){
+//                            String responseBody = EntityUtils.toString(response.getEntity());
+//
+//                            // Print the response
+//                            System.out.println("Response Status: " + response.getStatusLine());
+//                            System.out.println("Response Body: " + responseBody);
+//                        } catch (IOException e) {
+//                            System.out.println(e);
+//                        }
+//                    }
+//                }));
 
         return pipeline;
     }
