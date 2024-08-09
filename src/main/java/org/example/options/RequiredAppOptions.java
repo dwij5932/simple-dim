@@ -1,4 +1,4 @@
-package org.example.demodip.options;
+package org.example.options;
 
 import org.apache.beam.runners.flink.FlinkPipelineOptions;
 
