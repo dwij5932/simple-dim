@@ -21,6 +21,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.kafka.common.serialization.Deserializer;
+import org.example.dto.CustomerDetailsDTO;
 import org.example.transform.GenerateCustomerDeatils;
 import org.example.transform.KafkaGenericRecordConverter;
 import org.order.status.Order;
@@ -69,7 +70,13 @@ public class PipelineApplication {
                                 ))
                 )
                 .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
-                .apply("PrintMessage", ParDo.of(new GenerateCustomerDeatils()));
+                .apply("GetDetails", ParDo.of(new GenerateCustomerDeatils()))
+                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                        System.out.println(customerDetailsDTO);
+                    }
+                }));
 //                .apply("PrintMessage", ParDo.of(new DoFn<Order, Void>() {
 //                    CloseableHttpClient httpClient;
 //                    RequestConfig requestConfig;
