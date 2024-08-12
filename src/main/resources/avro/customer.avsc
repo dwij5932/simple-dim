@@ -1,0 +1,152 @@
+{
+  "doc": "Order state with customer info",
+  "fields": [
+    {
+      "doc": "Any unique identifier which may be used for de-duplication of messages during consumption",
+      "exmaple": "d59d8d8c-c781-11eb-b8bc-0242ac130003",
+      "name": "message_id",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Customer number as referenced within the seller’s system",
+      "name": "customer_number",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Customer name as referenced within the master data",
+      "name": "customer_name",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Customer email as referenced within the master data",
+      "name": "customer_email",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Customer tp as referenced within the master data",
+      "name": "customer_telephone",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Customer address as referenced within the seller’s system",
+      "name": "customer_address",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Identifier for the order as referenced within the seller’s system",
+      "name": "order_number",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Delivery date of the order in the form of yyyy-MM-dd",
+      "example": "2021-11-16",
+      "name": "delivery_date",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "The delivery method for the order",
+      "example": "GROUND, WILL_CALL etc.",
+      "name": "delivery_method",
+      "type": {
+        "avro.java.string": "String",
+        "type": "string"
+      }
+    },
+    {
+      "doc": "Status of the order in the seller system",
+      "name": "order_status",
+      "type": {
+        "name": "Order_Status",
+        "symbols": [
+          "SUBMIT",
+          "OPEN",
+          "DOWN_TO_ROUTING",
+          "LABEL",
+          "ROUTED",
+          "SHIPPED",
+          "CANCEL"
+        ],
+        "type": "enum"
+      }
+    },
+    {
+      "default": null,
+      "doc": "Total price of the order after considering substitutes, allocations and any other price adjustments",
+      "name": "total_price",
+      "type": [
+        "null",
+        {
+          "avro.java.string": "String",
+          "java-class": "java.math.BigDecimal",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "default": null,
+      "doc": "This field is used to represent the order date",
+      "example": "2023-01-25",
+      "name": "order_date",
+      "type": [
+        "null",
+        {
+          "avro.java.string": "String",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "default": null,
+      "doc": "This field is used to represent the created timestamp",
+      "example": "2022-12-28T16:55:30.252Z",
+      "name": "created_timestamp",
+      "type": [
+        "null",
+        {
+          "avro.java.string": "String",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "default": null,
+      "doc": "This field is used to represent the last modified  timestamp",
+      "example": "2022-12-28T16:55:30.252Z",
+      "name": "updated_timestamp",
+      "type": [
+        "null",
+        {
+          "avro.java.string": "String",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "name": "Customer",
+  "namespace": "status.customer.email",
+  "type": "record"
+}

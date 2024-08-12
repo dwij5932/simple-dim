@@ -1,5 +1,6 @@
 package org.example.transform;
 
+import org.apache.avro.specific.SpecificRecord;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
@@ -11,10 +12,15 @@ import org.apache.http.util.EntityUtils;
 import org.example.dto.CustomerDetailsDTO;
 import org.example.entity.CustomerResult;
 import org.example.transform.common.CustomDoFn;
+import org.example.util.Order_Status;
 import org.order.status.Order;
+import status.customer.email.Customer;
+import status.enterprise.email.Enterprise;
+import status.error.email.Error;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Objects;
 
 public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDTO> {
@@ -35,21 +41,69 @@ public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDT
 
     @Override
     protected void process(DoFn<Order, CustomerDetailsDTO>.ProcessContext c) throws Exception {
+        SpecificRecord order;
         String customerNo = (String)c.element().getCustomerNumber();
         System.out.println(customerNo);
         HttpGet httpGet = new HttpGet("http://localhost:5435/customer/"+ customerNo);
         httpGet.setConfig(requestConfig);
+
         try (CloseableHttpResponse response = httpClient.execute(httpGet)){
             String responseBody = EntityUtils.toString(response.getEntity());
             int status = response.getStatusLine().getStatusCode();
             if (status == HttpStatus.SC_OK){
                 System.out.println("Response Body: " + responseBody);
                 CustomerResult customerResult = objectMapper.readValue(responseBody, CustomerResult.class);
-                if (Objects.equals(customerResult.getSourceTable(), "Customer")){
-                    System.out.println("Customer");
-                }else{
-                    System.out.println("Enterprises");
-                }
+//                if (Objects.equals(customerResult.getSourceTable(), "Customer")){
+//                    System.out.println("Customer");
+//                    order = Customer.newBuilder()
+//                            .setMessageId(c.element().getMessageId())
+//                            .setCustomerNumber(c.element().getMessageId())
+//                            .setCustomerName(customerResult.getCustomerName())
+//                            .setCustomerEmail(customerResult.getEmail())
+//                            .setCustomerTelephone(customerResult.getTelephone())
+//                            .setCustomerAddress(customerResult.getAddress())
+//                            .setOrderNumber(c.element().getOrderNumber())
+//                            .setDeliveryDate(c.element().getDeliveryDate())
+//                            .setDeliveryMethod(c.element().getDeliveryMethod())
+//                            .setOrderStatus(Order_Status.toCustomerStatus(c.element().getOrderStatus()))
+//                            .setTotalPrice(c.element().getTotalPrice())
+//                            .setOrderDate(c.element().getOrderDate())
+//                            .setCreatedTimestamp(c.element().getCreatedTimestamp())
+//                            .setUpdatedTimestamp(new Date().toString())
+//                            .build();
+//                }else if (Objects.equals(customerResult.getSourceTable(), "Enterprises")){
+//                    System.out.println("Enterprises");
+//                    order = Enterprise.newBuilder()
+//                            .setMessageId(c.element().getMessageId())
+//                            .setCustomerNumber(c.element().getMessageId())
+//                            .setEnterpriseName(customerResult.getCustomerName())
+//                            .setEnterpriseEmail(customerResult.getEmail())
+//                            .setEnterpriseTelephone(customerResult.getTelephone())
+//                            .setEnterpriseAddress(customerResult.getAddress())
+//                            .setOrderNumber(c.element().getOrderNumber())
+//                            .setDeliveryDate(c.element().getDeliveryDate())
+//                            .setDeliveryMethod(c.element().getDeliveryMethod())
+//                            .setOrderStatus(Order_Status.toEnterpriseStatus(c.element().getOrderStatus()))
+//                            .setTotalPrice(c.element().getTotalPrice())
+//                            .setOrderDate(c.element().getOrderDate())
+//                            .setCreatedTimestamp(c.element().getCreatedTimestamp())
+//                            .setUpdatedTimestamp(new Date().toString())
+//                            .build();
+//                }else {
+//                    order = Error.newBuilder()
+//                            .setMessageId(c.element().getMessageId())
+//                            .setCustomerNumber(c.element().getMessageId())
+//                            .setOrderNumber(c.element().getOrderNumber())
+//                            .setDeliveryDate(c.element().getDeliveryDate())
+//                            .setDeliveryMethod(c.element().getDeliveryMethod())
+//                            .setOrderStatus(Order_Status.toErrorStatus(c.element().getOrderStatus()))
+//                            .setTotalPrice(c.element().getTotalPrice())
+//                            .setOrderDate(c.element().getOrderDate())
+//                            .setCreatedTimestamp(c.element().getCreatedTimestamp())
+//                            .setUpdatedTimestamp(new Date().toString())
+//                            .build();
+//                }
+//                System.out.println(order);
                 CustomerDetailsDTO customerDetailsDTO = CustomerDetailsDTO.builder()
                         .customerResult(customerResult)
                         .order(c.element())

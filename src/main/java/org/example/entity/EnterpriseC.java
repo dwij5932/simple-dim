@@ -8,7 +8,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Enterprise {
+public class EnterpriseC {
 
     @JsonProperty("customerID")
     private String customerID;

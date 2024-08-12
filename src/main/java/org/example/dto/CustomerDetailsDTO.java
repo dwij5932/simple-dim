@@ -1,6 +1,8 @@
 package org.example.dto;
 
 import lombok.*;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.specific.SpecificRecord;
 import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.example.entity.CustomerResult;

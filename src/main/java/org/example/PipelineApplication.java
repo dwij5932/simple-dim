@@ -15,6 +15,9 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTag;
+import org.apache.beam.sdk.values.TupleTagList;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -24,9 +27,13 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.example.dto.CustomerDetailsDTO;
 import org.example.transform.GenerateCustomerDeatils;
 import org.example.transform.KafkaGenericRecordConverter;
+import org.joda.time.Duration;
 import org.order.status.Order;
 import org.order.status.Order_Status;
 import org.order.status.Order_Type;
+import status.customer.email.Customer;
+import status.enterprise.email.Enterprise;
+import status.error.email.Error;
 import org.example.options.RequiredAppOptions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -51,7 +58,14 @@ public class PipelineApplication {
     public static Pipeline setupPipeline(RequiredAppOptions options){
         Pipeline pipeline = Pipeline.create(options);
 
-        pipeline
+        final TupleTag<CustomerDetailsDTO> sendToCustomer = new TupleTag<CustomerDetailsDTO>() {
+        };
+        final TupleTag<CustomerDetailsDTO> sendToEnterprise = new TupleTag<CustomerDetailsDTO>() {
+        };
+        final TupleTag<CustomerDetailsDTO> sendToError = new TupleTag<CustomerDetailsDTO>() {
+        };
+
+        PCollectionTuple mixedCollection = pipeline
                 .apply("ReadFromKafka",
                         KafkaIO.<String, GenericRecord>read()
                                 .withBootstrapServers("localhost:9092")
@@ -70,13 +84,28 @@ public class PipelineApplication {
                                 ))
                 )
                 .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
-                .apply("GetDetails", ParDo.of(new GenerateCustomerDeatils()))
-                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                .apply("Get Details", ParDo.of(new GenerateCustomerDeatils()))
+                .apply("Process Customer Details", ParDo.of(new DoFn<CustomerDetailsDTO, CustomerDetailsDTO>() {
                     @ProcessElement
-                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
-                        System.out.println(customerDetailsDTO);
+                    public void processElement(ProcessContext c) {
+                        CustomerDetailsDTO customerResult = c.element();
+
+                        if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Customer")) {
+                            c.output(sendToCustomer, customerResult);
+                        } else if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Enterprise")) {
+                            c.output(sendToEnterprise, customerResult);
+                        } else {
+                            c.output(sendToError, customerResult);
+                        }
                     }
-                }));
+                }).withOutputTags(sendToCustomer,
+                        TupleTagList.of(sendToEnterprise).and(sendToError)));
+//                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+//                    @ProcessElement
+//                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+//                        System.out.println(customerDetailsDTO);
+//                    }
+//                }));
 //                .apply("PrintMessage", ParDo.of(new DoFn<Order, Void>() {
 //                    CloseableHttpClient httpClient;
 //                    RequestConfig requestConfig;
@@ -108,6 +137,30 @@ public class PipelineApplication {
 //                        }
 //                    }
 //                }));
+        mixedCollection.get(sendToCustomer)
+                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                        System.out.println("Customer branch");
+                        System.out.println(customerDetailsDTO);
+                    }
+                }));
+        mixedCollection.get(sendToEnterprise)
+                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                        System.out.println("Enterprise branch");
+                        System.out.println(customerDetailsDTO);
+                    }
+                }));
+        mixedCollection.get(sendToError)
+                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                        System.out.println("Error branch");
+                        System.out.println(customerDetailsDTO);
+                    }
+                }));
 
         return pipeline;
     }

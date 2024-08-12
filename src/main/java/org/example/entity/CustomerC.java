@@ -7,7 +7,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Customer {
+public class CustomerC {
 
     private String customerID;
 
