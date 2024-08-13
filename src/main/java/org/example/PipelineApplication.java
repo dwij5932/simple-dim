@@ -26,8 +26,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.example.dto.CustomerDetailsDTO;
 import org.example.entity.CustomerResult;
-import org.example.transform.GenerateCustomerDeatils;
-import org.example.transform.KafkaGenericRecordConverter;
+import org.example.transform.*;
 import org.joda.time.Duration;
 import org.order.status.Order;
 //import org.order.status.Order_Status;
@@ -166,13 +165,14 @@ public class PipelineApplication {
                         c.output(customer);
                     }
                 }))
-                .apply("PrintMessage", ParDo.of(new DoFn<Customer, Void>() {
-                    @ProcessElement
-                    public void processElement(@Element Customer customer, ProcessContext processContext){
-                        System.out.println("Customer branch");
-                        System.out.println(customer);
-                    }
-                }));
+                        .apply("Write To Kafka", new CustomerKafkaWrite());
+//                .apply("PrintMessage", ParDo.of(new DoFn<Customer, Void>() {
+//                    @ProcessElement
+//                    public void processElement(@Element Customer customer, ProcessContext processContext){
+//                        System.out.println("Customer branch");
+//                        System.out.println(customer);
+//                    }
+//                }));
         mixedCollection.get(sendToEnterprise)
                 .apply("Convert to Enterprise", ParDo.of(new DoFn<CustomerDetailsDTO, Enterprise>() {
                     @ProcessElement
@@ -198,13 +198,14 @@ public class PipelineApplication {
                         c.output(enterprise);
                     }
                 }))
-                .apply("PrintMessage", ParDo.of(new DoFn<Enterprise, Void>() {
-                    @ProcessElement
-                    public void processElement(@Element Enterprise enterprise, ProcessContext processContext){
-                        System.out.println("Enterprise branch");
-                        System.out.println(enterprise);
-                    }
-                }));
+                .apply("Write To Kafka", new EnterpriseKafkaWrite());
+//                .apply("PrintMessage", ParDo.of(new DoFn<Enterprise, Void>() {
+//                    @ProcessElement
+//                    public void processElement(@Element Enterprise enterprise, ProcessContext processContext){
+//                        System.out.println("Enterprise branch");
+//                        System.out.println(enterprise);
+//                    }
+//                }));
         mixedCollection.get(sendToError)
                 .apply("Convert to Error", ParDo.of(new DoFn<CustomerDetailsDTO, Error>() {
                     @ProcessElement
@@ -225,13 +226,14 @@ public class PipelineApplication {
                         c.output(error);
                     }
                 }))
-                .apply("PrintMessage", ParDo.of(new DoFn<Error, Void>() {
-                    @ProcessElement
-                    public void processElement(@Element Error error, ProcessContext processContext){
-                        System.out.println("Error branch");
-                        System.out.println(error);
-                    }
-                }));
+                .apply("Write To Kafka", new ErrorKafkaWrite());
+//                .apply("PrintMessage", ParDo.of(new DoFn<Error, Void>() {
+//                    @ProcessElement
+//                    public void processElement(@Element Error error, ProcessContext processContext){
+//                        System.out.println("Error branch");
+//                        System.out.println(error);
+//                    }
+//                }));
 
         return pipeline;
     }
