@@ -25,11 +25,12 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.example.dto.CustomerDetailsDTO;
+import org.example.entity.CustomerResult;
 import org.example.transform.GenerateCustomerDeatils;
 import org.example.transform.KafkaGenericRecordConverter;
 import org.joda.time.Duration;
 import org.order.status.Order;
-import org.order.status.Order_Status;
+//import org.order.status.Order_Status;
 import org.order.status.Order_Type;
 import status.customer.email.Customer;
 import status.enterprise.email.Enterprise;
@@ -38,10 +39,11 @@ import org.example.options.RequiredAppOptions;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.http.client.config.RequestConfig;
-
+import org.example.util.Order_Status;
 import javax.naming.ServiceUnavailableException;
 import java.io.IOException;
 import java.net.http.HttpClient;
+import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 
@@ -89,12 +91,13 @@ public class PipelineApplication {
                     @ProcessElement
                     public void processElement(ProcessContext c) {
                         CustomerDetailsDTO customerResult = c.element();
-
+                        System.out.println(customerResult);
                         if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Customer")) {
                             c.output(sendToCustomer, customerResult);
                         } else if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Enterprise")) {
                             c.output(sendToEnterprise, customerResult);
                         } else {
+                            System.out.println("Send to Error Branch");
                             c.output(sendToError, customerResult);
                         }
                     }
@@ -138,27 +141,95 @@ public class PipelineApplication {
 //                    }
 //                }));
         mixedCollection.get(sendToCustomer)
-                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                .apply("Convert to Customer", ParDo.of(new DoFn<CustomerDetailsDTO, Customer>() {
                     @ProcessElement
-                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                    public void processElement(ProcessContext c){
+                        Order order = c.element().getOrder();
+                        CustomerResult customerResult = c.element().getCustomerResult();
+                        Customer customer =  Customer.newBuilder()
+                            .setMessageId(order.getMessageId())
+                            .setCustomerNumber(order.getMessageId())
+                            .setCustomerName(customerResult.getCustomerName())
+                            .setCustomerEmail(customerResult.getEmail())
+                            .setCustomerTelephone(customerResult.getTelephone())
+                            .setCustomerAddress(customerResult.getAddress())
+                            .setOrderNumber(order.getOrderNumber())
+                            .setDeliveryDate(order.getDeliveryDate())
+                            .setDeliveryMethod(order.getDeliveryMethod())
+                            .setOrderStatus(Order_Status.toCustomerStatus(order.getOrderStatus()))
+                            .setTotalPrice(order.getTotalPrice())
+                            .setOrderDate(order.getOrderDate())
+                            .setCreatedTimestamp(order.getCreatedTimestamp())
+                            .setUpdatedTimestamp(new Date().toString())
+                            .build();
+//                        System.out.println(customer);
+                        c.output(customer);
+                    }
+                }))
+                .apply("PrintMessage", ParDo.of(new DoFn<Customer, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element Customer customer, ProcessContext processContext){
                         System.out.println("Customer branch");
-                        System.out.println(customerDetailsDTO);
+                        System.out.println(customer);
                     }
                 }));
         mixedCollection.get(sendToEnterprise)
-                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                .apply("Convert to Enterprise", ParDo.of(new DoFn<CustomerDetailsDTO, Enterprise>() {
                     @ProcessElement
-                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                    public void processElement(ProcessContext c){
+                        Order order = c.element().getOrder();
+                        CustomerResult customerResult = c.element().getCustomerResult();
+                        Enterprise enterprise =  Enterprise.newBuilder()
+                                .setMessageId(order.getMessageId())
+                                .setCustomerNumber(order.getMessageId())
+                                .setEnterpriseName(customerResult.getCustomerName())
+                                .setEnterpriseEmail(customerResult.getEmail())
+                                .setEnterpriseTelephone(customerResult.getTelephone())
+                                .setEnterpriseAddress(customerResult.getAddress())
+                                .setOrderNumber(order.getOrderNumber())
+                                .setDeliveryDate(order.getDeliveryDate())
+                                .setDeliveryMethod(order.getDeliveryMethod())
+                                .setOrderStatus(Order_Status.toEnterpriseStatus(order.getOrderStatus()))
+                                .setTotalPrice(order.getTotalPrice())
+                                .setOrderDate(order.getOrderDate())
+                                .setCreatedTimestamp(order.getCreatedTimestamp())
+                                .setUpdatedTimestamp(new Date().toString())
+                                .build();
+                        c.output(enterprise);
+                    }
+                }))
+                .apply("PrintMessage", ParDo.of(new DoFn<Enterprise, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element Enterprise enterprise, ProcessContext processContext){
                         System.out.println("Enterprise branch");
-                        System.out.println(customerDetailsDTO);
+                        System.out.println(enterprise);
                     }
                 }));
         mixedCollection.get(sendToError)
-                .apply("PrintMessage", ParDo.of(new DoFn<CustomerDetailsDTO, Void>() {
+                .apply("Convert to Error", ParDo.of(new DoFn<CustomerDetailsDTO, Error>() {
                     @ProcessElement
-                    public void processElement(@Element CustomerDetailsDTO customerDetailsDTO, ProcessContext processContext){
+                    public void processElement(ProcessContext c){
+                        Order order = c.element().getOrder();
+                        Error error =  Error.newBuilder()
+                                .setMessageId(order.getMessageId())
+                                .setCustomerNumber(order.getMessageId())
+                                .setOrderNumber(order.getOrderNumber())
+                                .setDeliveryDate(order.getDeliveryDate())
+                                .setDeliveryMethod(order.getDeliveryMethod())
+                                .setOrderStatus(Order_Status.toErrorStatus(order.getOrderStatus()))
+                                .setTotalPrice(order.getTotalPrice())
+                                .setOrderDate(order.getOrderDate())
+                                .setCreatedTimestamp(order.getCreatedTimestamp())
+                                .setUpdatedTimestamp(new Date().toString())
+                                .build();
+                        c.output(error);
+                    }
+                }))
+                .apply("PrintMessage", ParDo.of(new DoFn<Error, Void>() {
+                    @ProcessElement
+                    public void processElement(@Element Error error, ProcessContext processContext){
                         System.out.println("Error branch");
-                        System.out.println(customerDetailsDTO);
+                        System.out.println(error);
                     }
                 }));
 

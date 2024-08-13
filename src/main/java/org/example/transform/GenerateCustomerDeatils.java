@@ -110,8 +110,26 @@ public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDT
                         .build();
                 c.output(customerDetailsDTO);
             } else if (status == HttpStatus.SC_NOT_FOUND) {
-                System.out.println("No user Found");
-                c.output(new CustomerDetailsDTO());
+                try {
+                    System.out.println("No user Found");
+                    CustomerResult customerResult = CustomerResult.builder()
+                            .customerID("")
+                            .customerName("")
+                            .email("")
+                            .telephone("")
+                            .address("")
+                            .sourceTable("")
+                            .build();
+                    CustomerDetailsDTO customerDetailsDTO = CustomerDetailsDTO.builder()
+                            .customerResult(customerResult)
+                            .order(c.element())
+                            .build();
+                    System.out.println("CustomerDetailsDTO created: " + customerDetailsDTO);
+                    c.output(customerDetailsDTO);
+                } catch (Exception e) {
+                    System.err.println("Error processing element: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }else {
                 System.out.println("Error");
             }
