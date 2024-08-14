@@ -13,7 +13,10 @@ import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.beam.sdk.io.kafka.KafkaRecord;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.windowing.FixedWindows;
+import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTag;
@@ -85,6 +88,28 @@ public class PipelineApplication {
                                 ))
                 )
                 .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
+                .apply("Windowing", Window.into(FixedWindows.of(Duration.standardMinutes(1))))
+                .apply("Grouping", GroupByKey.create())
+                .apply("ExtractLatestUpdate", ParDo.of(new DoFn<KV<String,Iterable<Order>>,KV<String,Order>>(){
+                    @ProcessElement
+                    public void processElement(ProcessContext context){
+                        KV<String,Iterable<Order>> element = context.element();
+                        Iterable<Order> updates = element.getValue();
+                        System.out.println("After Group By");
+                        System.out.println(context);
+
+                        Order lastesrUpdate = null;
+
+                        for (Order update: updates){
+                        //    if (lastesrUpdate == null || update.getCreatedTimestamp().isAfter(lastesrUpdate.getCreatedTimestamp())){
+                                lastesrUpdate = update;
+                        //    }
+                        }
+                        if (lastesrUpdate != null){
+                            context.output(KV.of("f",lastesrUpdate));
+                        }
+                    }
+                }))
                 .apply("Get Details", ParDo.of(new GenerateCustomerDeatils()))
                 .apply("Process Customer Details", ParDo.of(new DoFn<CustomerDetailsDTO, CustomerDetailsDTO>() {
                     @ProcessElement
@@ -96,7 +121,7 @@ public class PipelineApplication {
                         } else if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Enterprise")) {
                             c.output(sendToEnterprise, customerResult);
                         } else {
-                            System.out.println("Send to Error Branch");
+//                            System.out.println("Send to Error Branch");
                             c.output(sendToError, customerResult);
                         }
                     }

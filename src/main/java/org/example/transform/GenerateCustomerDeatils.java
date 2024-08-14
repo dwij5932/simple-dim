@@ -2,6 +2,7 @@ package org.example.transform;
 
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -23,7 +24,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Objects;
 
-public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDTO> {
+public class GenerateCustomerDeatils extends CustomDoFn<KV<String,Order>, CustomerDetailsDTO> {
 
     CloseableHttpClient httpClient;
     RequestConfig requestConfig;
@@ -40,10 +41,11 @@ public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDT
     }
 
     @Override
-    protected void process(DoFn<Order, CustomerDetailsDTO>.ProcessContext c) throws Exception {
+    protected void process(DoFn<KV<String,Order>, CustomerDetailsDTO>.ProcessContext c) throws Exception {
         SpecificRecord order;
-        String customerNo = (String)c.element().getCustomerNumber();
-        System.out.println(customerNo);
+        String customerNo = (String)c.element().getValue().getCustomerNumber();
+//        System.out.println(c.element().getKey());
+//        System.out.println(customerNo);
         HttpGet httpGet = new HttpGet("http://localhost:5435/customer/"+ customerNo);
         httpGet.setConfig(requestConfig);
 
@@ -51,7 +53,7 @@ public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDT
             String responseBody = EntityUtils.toString(response.getEntity());
             int status = response.getStatusLine().getStatusCode();
             if (status == HttpStatus.SC_OK){
-                System.out.println("Response Body: " + responseBody);
+//                System.out.println("Response Body: " + responseBody);
                 CustomerResult customerResult = objectMapper.readValue(responseBody, CustomerResult.class);
 //                if (Objects.equals(customerResult.getSourceTable(), "Customer")){
 //                    System.out.println("Customer");
@@ -106,12 +108,12 @@ public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDT
 //                System.out.println(order);
                 CustomerDetailsDTO customerDetailsDTO = CustomerDetailsDTO.builder()
                         .customerResult(customerResult)
-                        .order(c.element())
+                        .order(c.element().getValue())
                         .build();
                 c.output(customerDetailsDTO);
             } else if (status == HttpStatus.SC_NOT_FOUND) {
                 try {
-                    System.out.println("No user Found");
+//                    System.out.println("No user Found");
                     CustomerResult customerResult = CustomerResult.builder()
                             .customerID("")
                             .customerName("")
@@ -122,9 +124,9 @@ public class GenerateCustomerDeatils extends CustomDoFn<Order, CustomerDetailsDT
                             .build();
                     CustomerDetailsDTO customerDetailsDTO = CustomerDetailsDTO.builder()
                             .customerResult(customerResult)
-                            .order(c.element())
+                            .order(c.element().getValue())
                             .build();
-                    System.out.println("CustomerDetailsDTO created: " + customerDetailsDTO);
+//                    System.out.println("CustomerDetailsDTO created: " + customerDetailsDTO);
                     c.output(customerDetailsDTO);
                 } catch (Exception e) {
                     System.err.println("Error processing element: " + e.getMessage());
