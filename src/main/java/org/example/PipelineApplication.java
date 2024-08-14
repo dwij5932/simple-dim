@@ -103,38 +103,39 @@ public class PipelineApplication {
                 .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
                 .apply("Windowing", Window.into(FixedWindows.of(Duration.standardSeconds(30))))
                 .apply("Grouping", GroupByKey.create())
-                .apply("ExtractLatestUpdate", ParDo.of(new DoFn<KV<String,Iterable<Order>>,KV<String,Order>>(){
-
-                    DateTimeFormatter formatter;
-
-                    @Setup
-                    public void setup(){
-                        formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy");
-                    }
-                    @ProcessElement
-                    public void processElement(ProcessContext context){
-                        KV<String,Iterable<Order>> element = context.element();
-                        Iterable<Order> updates = element.getValue();
-//                        System.out.println("After Group By");
-//                        System.out.println(context);
-                        Order lastesrUpdate = null;
-                        long latestTimestamp = context.timestamp().getMillis();
-
-                        for (Order update: updates){
-                            ZonedDateTime dateTime = ZonedDateTime.parse(update.getCreatedTimestamp(),  formatter.withZone(ZoneId.of("Asia/Kolkata")));
-                            long eventTimestamp = dateTime.toInstant().toEpochMilli();
-//                            Instant eventTimestamp = dateTime.toInstant();
-                            System.out.println(latestTimestamp+" "+ eventTimestamp+" - "+update);
-                            if (lastesrUpdate == null || eventTimestamp > latestTimestamp){
-                                lastesrUpdate = update;
-                                latestTimestamp = eventTimestamp;
-                            }
-                        }
-                        if (lastesrUpdate != null){
-                            context.output(KV.of("f",lastesrUpdate));
-                        }
-                    }
-                }))
+//                .apply("ExtractLatestUpdate", ParDo.of(new DoFn<KV<String,Iterable<Order>>,KV<String,Order>>(){
+//
+//                    DateTimeFormatter formatter;
+//
+//                    @Setup
+//                    public void setup(){
+//                        formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy");
+//                    }
+//                    @ProcessElement
+//                    public void processElement(ProcessContext context){
+//                        KV<String,Iterable<Order>> element = context.element();
+//                        Iterable<Order> updates = element.getValue();
+////                        System.out.println("After Group By");
+////                        System.out.println(context);
+//                        Order lastesrUpdate = null;
+//                        long latestTimestamp = context.timestamp().getMillis();
+//
+//                        for (Order update: updates){
+//                            ZonedDateTime dateTime = ZonedDateTime.parse(update.getCreatedTimestamp(),  formatter.withZone(ZoneId.of("Asia/Kolkata")));
+//                            long eventTimestamp = dateTime.toInstant().toEpochMilli();
+////                            Instant eventTimestamp = dateTime.toInstant();
+//                            System.out.println(latestTimestamp+" "+ eventTimestamp+" - "+update);
+//                            if (lastesrUpdate == null || eventTimestamp > latestTimestamp){
+//                                lastesrUpdate = update;
+//                                latestTimestamp = eventTimestamp;
+//                            }
+//                        }
+//                        if (lastesrUpdate != null){
+//                            context.output(KV.of("f",lastesrUpdate));
+//                        }
+//                    }
+//                }))
+                .apply("ExtractLatestUpdate", ParDo.of(new ExtractLatestOrder()))
                 .apply("Get Details", ParDo.of(new GenerateCustomerDeatils()))
                 .apply("Process Customer Details", ParDo.of(new DoFn<CustomerDetailsDTO, CustomerDetailsDTO>() {
                     @ProcessElement
