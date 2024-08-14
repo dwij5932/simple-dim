@@ -15,6 +15,7 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.transforms.windowing.FixedWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
@@ -30,6 +31,11 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.example.dto.CustomerDetailsDTO;
 import org.example.entity.CustomerResult;
 import org.example.transform.*;
+//import org.joda.time.DateTime;
+//import org.joda.time.DateTimeZone;
+//import org.joda.time.Duration;
+//import java.time.Instant;
+//import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.Duration;
 import org.order.status.Order;
 //import org.order.status.Order_Status;
@@ -45,9 +51,16 @@ import org.example.util.Order_Status;
 import javax.naming.ServiceUnavailableException;
 import java.io.IOException;
 import java.net.http.HttpClient;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import org.joda.time.format.DateTimeFormat;
+
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
+import java.time.LocalDateTime;
 
 public class PipelineApplication {
 
@@ -88,22 +101,34 @@ public class PipelineApplication {
                                 ))
                 )
                 .apply("ExtractKV", ParDo.of(new KafkaGenericRecordConverter()))
-                .apply("Windowing", Window.into(FixedWindows.of(Duration.standardMinutes(1))))
+                .apply("Windowing", Window.into(FixedWindows.of(Duration.standardSeconds(30))))
                 .apply("Grouping", GroupByKey.create())
                 .apply("ExtractLatestUpdate", ParDo.of(new DoFn<KV<String,Iterable<Order>>,KV<String,Order>>(){
+
+                    DateTimeFormatter formatter;
+
+                    @Setup
+                    public void setup(){
+                        formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy");
+                    }
                     @ProcessElement
                     public void processElement(ProcessContext context){
                         KV<String,Iterable<Order>> element = context.element();
                         Iterable<Order> updates = element.getValue();
-                        System.out.println("After Group By");
-                        System.out.println(context);
-
+//                        System.out.println("After Group By");
+//                        System.out.println(context);
                         Order lastesrUpdate = null;
+                        long latestTimestamp = context.timestamp().getMillis();
 
                         for (Order update: updates){
-                        //    if (lastesrUpdate == null || update.getCreatedTimestamp().isAfter(lastesrUpdate.getCreatedTimestamp())){
+                            ZonedDateTime dateTime = ZonedDateTime.parse(update.getCreatedTimestamp(),  formatter.withZone(ZoneId.of("Asia/Kolkata")));
+                            long eventTimestamp = dateTime.toInstant().toEpochMilli();
+//                            Instant eventTimestamp = dateTime.toInstant();
+                            System.out.println(latestTimestamp+" "+ eventTimestamp+" - "+update);
+                            if (lastesrUpdate == null || eventTimestamp > latestTimestamp){
                                 lastesrUpdate = update;
-                        //    }
+                                latestTimestamp = eventTimestamp;
+                            }
                         }
                         if (lastesrUpdate != null){
                             context.output(KV.of("f",lastesrUpdate));

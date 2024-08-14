@@ -30,11 +30,11 @@ public class KafkaGenericRecordConverter extends CustomDoFn<KafkaRecord<String, 
         String content = Objects.requireNonNull(element).toString();
         Order order = mapper.readValue(content, Order.class);
 
-        LocalDateTime dateTime = LocalDateTime.parse(new Date().toString(), java.time.format.DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy"));
-        long epochTime = dateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
+//        LocalDateTime dateTime = LocalDateTime.parse(new Date().toString(), java.time.format.DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy"));
+//        long epochTime = dateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
 
         String orderNumber = order.getCustomerNumber().toString();
-        System.out.println(epochTime + " -- " + orderNumber);
+        System.out.println(orderNumber);
         c.output(KV.of(orderNumber,order));
 
     }
