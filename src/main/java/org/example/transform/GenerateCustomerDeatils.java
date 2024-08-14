@@ -19,7 +19,6 @@ import status.customer.email.Customer;
 import status.enterprise.email.Enterprise;
 import status.error.email.Error;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.util.Date;
 import java.util.Objects;
@@ -55,57 +54,6 @@ public class GenerateCustomerDeatils extends CustomDoFn<KV<String,Order>, Custom
             if (status == HttpStatus.SC_OK){
 //                System.out.println("Response Body: " + responseBody);
                 CustomerResult customerResult = objectMapper.readValue(responseBody, CustomerResult.class);
-//                if (Objects.equals(customerResult.getSourceTable(), "Customer")){
-//                    System.out.println("Customer");
-//                    order = Customer.newBuilder()
-//                            .setMessageId(c.element().getMessageId())
-//                            .setCustomerNumber(c.element().getMessageId())
-//                            .setCustomerName(customerResult.getCustomerName())
-//                            .setCustomerEmail(customerResult.getEmail())
-//                            .setCustomerTelephone(customerResult.getTelephone())
-//                            .setCustomerAddress(customerResult.getAddress())
-//                            .setOrderNumber(c.element().getOrderNumber())
-//                            .setDeliveryDate(c.element().getDeliveryDate())
-//                            .setDeliveryMethod(c.element().getDeliveryMethod())
-//                            .setOrderStatus(Order_Status.toCustomerStatus(c.element().getOrderStatus()))
-//                            .setTotalPrice(c.element().getTotalPrice())
-//                            .setOrderDate(c.element().getOrderDate())
-//                            .setCreatedTimestamp(c.element().getCreatedTimestamp())
-//                            .setUpdatedTimestamp(new Date().toString())
-//                            .build();
-//                }else if (Objects.equals(customerResult.getSourceTable(), "Enterprises")){
-//                    System.out.println("Enterprises");
-//                    order = Enterprise.newBuilder()
-//                            .setMessageId(c.element().getMessageId())
-//                            .setCustomerNumber(c.element().getMessageId())
-//                            .setEnterpriseName(customerResult.getCustomerName())
-//                            .setEnterpriseEmail(customerResult.getEmail())
-//                            .setEnterpriseTelephone(customerResult.getTelephone())
-//                            .setEnterpriseAddress(customerResult.getAddress())
-//                            .setOrderNumber(c.element().getOrderNumber())
-//                            .setDeliveryDate(c.element().getDeliveryDate())
-//                            .setDeliveryMethod(c.element().getDeliveryMethod())
-//                            .setOrderStatus(Order_Status.toEnterpriseStatus(c.element().getOrderStatus()))
-//                            .setTotalPrice(c.element().getTotalPrice())
-//                            .setOrderDate(c.element().getOrderDate())
-//                            .setCreatedTimestamp(c.element().getCreatedTimestamp())
-//                            .setUpdatedTimestamp(new Date().toString())
-//                            .build();
-//                }else {
-//                    order = Error.newBuilder()
-//                            .setMessageId(c.element().getMessageId())
-//                            .setCustomerNumber(c.element().getMessageId())
-//                            .setOrderNumber(c.element().getOrderNumber())
-//                            .setDeliveryDate(c.element().getDeliveryDate())
-//                            .setDeliveryMethod(c.element().getDeliveryMethod())
-//                            .setOrderStatus(Order_Status.toErrorStatus(c.element().getOrderStatus()))
-//                            .setTotalPrice(c.element().getTotalPrice())
-//                            .setOrderDate(c.element().getOrderDate())
-//                            .setCreatedTimestamp(c.element().getCreatedTimestamp())
-//                            .setUpdatedTimestamp(new Date().toString())
-//                            .build();
-//                }
-//                System.out.println(order);
                 CustomerDetailsDTO customerDetailsDTO = CustomerDetailsDTO.builder()
                         .customerResult(customerResult)
                         .order(c.element().getValue())

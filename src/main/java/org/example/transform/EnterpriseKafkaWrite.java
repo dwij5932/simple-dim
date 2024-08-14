@@ -13,10 +13,6 @@ public class EnterpriseKafkaWrite extends PTransform<PCollection<Enterprise>, PD
     @Override
     public PDone expand(PCollection<Enterprise> input) {
         return input
-//                .apply("Convert to KV",
-//                        MapElements
-//                                .into(TypeDescriptor.of(KV.class))
-//                                .via((Customer customer) -> KV.of(customer.getKey(), customer)) )
                 .apply(
                         "writePubsubMessagesToKafka", KafkaIO.<Void, Enterprise>write()
                                 .withBootstrapServers("localhost:9092")

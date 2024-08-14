@@ -12,10 +12,6 @@ public class ErrorKafkaWrite extends PTransform<PCollection<Error>, PDone> {
     @Override
     public PDone expand(PCollection<Error> input) {
         return input
-//                .apply("Convert to KV",
-//                        MapElements
-//                                .into(TypeDescriptor.of(KV.class))
-//                                .via((Customer customer) -> KV.of(customer.getKey(), customer)) )
                 .apply(
                         "writePubsubMessagesToKafka", KafkaIO.<Void, Error>write()
                                 .withBootstrapServers("localhost:9092")
