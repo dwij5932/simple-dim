@@ -1,7 +1,6 @@
 package org.example.util;
 
 public class Order_Status {
-//    SUBMIT, OPEN, DOWN_TO_ROUTING, LABEL, ROUTED, SHIPPED, CANCEL;
 
     public static status.customer.email.Order_Status toCustomerStatus( org.order.status.Order_Status sourceStatus) {
         switch (sourceStatus) {

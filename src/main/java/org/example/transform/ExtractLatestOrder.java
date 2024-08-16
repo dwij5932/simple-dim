@@ -21,15 +21,12 @@ public class ExtractLatestOrder extends CustomDoFn<KV<String,Iterable<Order>>,KV
     protected void process(ProcessContext context) throws Exception {
         KV<String,Iterable<Order>> element = context.element();
         Iterable<Order> updates = element.getValue();
-//                        System.out.println("After Group By");
-//                        System.out.println(context);
         Order lastesrUpdate = null;
         long latestTimestamp = context.timestamp().getMillis();
 
         for (Order update: updates){
             ZonedDateTime dateTime = ZonedDateTime.parse(update.getCreatedTimestamp(),  formatter.withZone(ZoneId.of("Asia/Kolkata")));
             long eventTimestamp = dateTime.toInstant().toEpochMilli();
-//                            Instant eventTimestamp = dateTime.toInstant();
             System.out.println(latestTimestamp+" "+ eventTimestamp+" - "+update);
             if (lastesrUpdate == null || eventTimestamp > latestTimestamp){
                 lastesrUpdate = update;
