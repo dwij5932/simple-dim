@@ -27,7 +27,6 @@ import org.example.config.KafkaConfiguration;
 import status.customer.email.Customer;
 import java.util.Map;
 import java.util.Properties;
-
 import static org.example.config.KafkaConfiguration.*;
 import static org.example.config.KafkaConfiguration.VALUE_SERIALIZER_CLASS;
 

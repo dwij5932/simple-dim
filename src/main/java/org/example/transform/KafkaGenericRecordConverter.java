@@ -8,7 +8,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.example.transform.common.CustomDoFn;
 import org.joda.time.Instant;
 import org.order.status.Order;
-
 import javax.xml.crypto.Data;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -29,9 +28,6 @@ public class KafkaGenericRecordConverter extends CustomDoFn<KafkaRecord<String, 
         GenericRecord element = Objects.requireNonNull(c.element()).getKV().getValue();
         String content = Objects.requireNonNull(element).toString();
         Order order = mapper.readValue(content, Order.class);
-
-//        LocalDateTime dateTime = LocalDateTime.parse(new Date().toString(), java.time.format.DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy"));
-//        long epochTime = dateTime.toInstant(ZoneOffset.UTC).toEpochMilli();
 
         String orderNumber = order.getCustomerNumber().toString();
         System.out.println(orderNumber);

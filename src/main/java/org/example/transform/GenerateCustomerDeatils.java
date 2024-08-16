@@ -43,8 +43,6 @@ public class GenerateCustomerDeatils extends CustomDoFn<KV<String,Order>, Custom
     protected void process(DoFn<KV<String,Order>, CustomerDetailsDTO>.ProcessContext c) throws Exception {
         SpecificRecord order;
         String customerNo = (String)c.element().getValue().getCustomerNumber();
-//        System.out.println(c.element().getKey());
-//        System.out.println(customerNo);
         HttpGet httpGet = new HttpGet("http://localhost:5435/customer/"+ customerNo);
         httpGet.setConfig(requestConfig);
 
@@ -52,7 +50,6 @@ public class GenerateCustomerDeatils extends CustomDoFn<KV<String,Order>, Custom
             String responseBody = EntityUtils.toString(response.getEntity());
             int status = response.getStatusLine().getStatusCode();
             if (status == HttpStatus.SC_OK){
-//                System.out.println("Response Body: " + responseBody);
                 CustomerResult customerResult = objectMapper.readValue(responseBody, CustomerResult.class);
                 CustomerDetailsDTO customerDetailsDTO = CustomerDetailsDTO.builder()
                         .customerResult(customerResult)
@@ -61,7 +58,6 @@ public class GenerateCustomerDeatils extends CustomDoFn<KV<String,Order>, Custom
                 c.output(customerDetailsDTO);
             } else if (status == HttpStatus.SC_NOT_FOUND) {
                 try {
-//                    System.out.println("No user Found");
                     CustomerResult customerResult = CustomerResult.builder()
                             .customerID("")
                             .customerName("")
@@ -74,7 +70,6 @@ public class GenerateCustomerDeatils extends CustomDoFn<KV<String,Order>, Custom
                             .customerResult(customerResult)
                             .order(c.element().getValue())
                             .build();
-//                    System.out.println("CustomerDetailsDTO created: " + customerDetailsDTO);
                     c.output(customerDetailsDTO);
                 } catch (Exception e) {
                     System.err.println("Error processing element: " + e.getMessage());

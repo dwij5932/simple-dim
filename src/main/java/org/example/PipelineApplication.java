@@ -31,14 +31,8 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.example.dto.CustomerDetailsDTO;
 import org.example.entity.CustomerResult;
 import org.example.transform.*;
-//import org.joda.time.DateTime;
-//import org.joda.time.DateTimeZone;
-//import org.joda.time.Duration;
-//import java.time.Instant;
-//import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.Duration;
 import org.order.status.Order;
-//import org.order.status.Order_Status;
 import org.order.status.Order_Type;
 import status.customer.email.Customer;
 import status.enterprise.email.Enterprise;
@@ -54,7 +48,6 @@ import java.net.http.HttpClient;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import org.joda.time.format.DateTimeFormat;
-
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -105,98 +98,23 @@ public class PipelineApplication {
                 .apply("Grouping", GroupByKey.create())
                 .apply("ExtractLatestUpdate", ParDo.of(new ExtractLatestOrder()))
                 .apply("Get Details", ParDo.of(new GenerateCustomerDeatils()))
-                .apply("Process Customer Details", ParDo.of(new DoFn<CustomerDetailsDTO, CustomerDetailsDTO>() {
-                    @ProcessElement
-                    public void processElement(ProcessContext c) {
-                        CustomerDetailsDTO customerResult = c.element();
-                        System.out.println(customerResult);
-                        if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Customer")) {
-                            c.output(sendToCustomer, customerResult);
-                        } else if (Objects.equals(customerResult.getCustomerResult().getSourceTable(), "Enterprise")) {
-                            c.output(sendToEnterprise, customerResult);
-                        } else {
-//                            System.out.println("Send to Error Branch");
-                            c.output(sendToError, customerResult);
-                        }
-                    }
-                }).withOutputTags(sendToCustomer,
+                .apply("Branching Orders", ParDo.of(new BranchingOrders(sendToCustomer,sendToEnterprise,sendToError)
+                        ).withOutputTags(sendToCustomer,
                         TupleTagList.of(sendToEnterprise).and(sendToError)));
 
         mixedCollection.get(sendToCustomer)
-                .apply("Convert to Customer", ParDo.of(new DoFn<CustomerDetailsDTO, Customer>() {
-                    @ProcessElement
-                    public void processElement(ProcessContext c){
-                        Order order = c.element().getOrder();
-                        CustomerResult customerResult = c.element().getCustomerResult();
-                        Customer customer =  Customer.newBuilder()
-                            .setMessageId(order.getMessageId())
-                            .setCustomerNumber(order.getMessageId())
-                            .setCustomerName(customerResult.getCustomerName())
-                            .setCustomerEmail(customerResult.getEmail())
-                            .setCustomerTelephone(customerResult.getTelephone())
-                            .setCustomerAddress(customerResult.getAddress())
-                            .setOrderNumber(order.getOrderNumber())
-                            .setDeliveryDate(order.getDeliveryDate())
-                            .setDeliveryMethod(order.getDeliveryMethod())
-                            .setOrderStatus(Order_Status.toCustomerStatus(order.getOrderStatus()))
-                            .setTotalPrice(order.getTotalPrice())
-                            .setOrderDate(order.getOrderDate())
-                            .setCreatedTimestamp(order.getCreatedTimestamp())
-                            .setUpdatedTimestamp(new Date().toString())
-                            .build();
-//                        System.out.println(customer);
-                        c.output(customer);
-                    }
-                }))
+                .apply("Convert to Customer", ParDo.of(new ConverttoCustomer()
+                ))
                         .apply("Write To Kafka", new CustomerKafkaWrite());
 
         mixedCollection.get(sendToEnterprise)
-                .apply("Convert to Enterprise", ParDo.of(new DoFn<CustomerDetailsDTO, Enterprise>() {
-                    @ProcessElement
-                    public void processElement(ProcessContext c){
-                        Order order = c.element().getOrder();
-                        CustomerResult customerResult = c.element().getCustomerResult();
-                        Enterprise enterprise =  Enterprise.newBuilder()
-                                .setMessageId(order.getMessageId())
-                                .setCustomerNumber(order.getMessageId())
-                                .setEnterpriseName(customerResult.getCustomerName())
-                                .setEnterpriseEmail(customerResult.getEmail())
-                                .setEnterpriseTelephone(customerResult.getTelephone())
-                                .setEnterpriseAddress(customerResult.getAddress())
-                                .setOrderNumber(order.getOrderNumber())
-                                .setDeliveryDate(order.getDeliveryDate())
-                                .setDeliveryMethod(order.getDeliveryMethod())
-                                .setOrderStatus(Order_Status.toEnterpriseStatus(order.getOrderStatus()))
-                                .setTotalPrice(order.getTotalPrice())
-                                .setOrderDate(order.getOrderDate())
-                                .setCreatedTimestamp(order.getCreatedTimestamp())
-                                .setUpdatedTimestamp(new Date().toString())
-                                .build();
-                        c.output(enterprise);
-                    }
-                }))
+                .apply("Convert to Enterprise", ParDo.of(new ConverttoEnterprise()
+                ))
                 .apply("Write To Kafka", new EnterpriseKafkaWrite());
 
         mixedCollection.get(sendToError)
-                .apply("Convert to Error", ParDo.of(new DoFn<CustomerDetailsDTO, Error>() {
-                    @ProcessElement
-                    public void processElement(ProcessContext c){
-                        Order order = c.element().getOrder();
-                        Error error =  Error.newBuilder()
-                                .setMessageId(order.getMessageId())
-                                .setCustomerNumber(order.getMessageId())
-                                .setOrderNumber(order.getOrderNumber())
-                                .setDeliveryDate(order.getDeliveryDate())
-                                .setDeliveryMethod(order.getDeliveryMethod())
-                                .setOrderStatus(Order_Status.toErrorStatus(order.getOrderStatus()))
-                                .setTotalPrice(order.getTotalPrice())
-                                .setOrderDate(order.getOrderDate())
-                                .setCreatedTimestamp(order.getCreatedTimestamp())
-                                .setUpdatedTimestamp(new Date().toString())
-                                .build();
-                        c.output(error);
-                    }
-                }))
+                .apply("Convert to Error", ParDo.of(new ConverttoError()
+                ))
                 .apply("Write To Kafka", new ErrorKafkaWrite());
 
         return pipeline;
